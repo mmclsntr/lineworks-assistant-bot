@@ -1,0 +1,23 @@
+version: "3.0"
+
+services:
+  workspace:
+    build: .
+    tty: true
+    volumes:
+      - ~/.aws/:/root/.aws:ro
+      - .:/app
+    environment:
+      - 'PS1=[\u@\h \W] \$$ '
+      - OPENAI_API_TYPE
+      - OPENAI_API_KEY
+      - OPENAI_API_BASE
+      - OPENAI_MODEL
+      - OPENAI_ORGANIZATION_ID
+      - LW_API_BOT_ID
+      - LW_API_BOT_SECRET
+      - LW_API_CLIENT_ID
+      - LW_API_CLIENT_SECRET
+      - LW_API_SERVICE_ACCOUNT
+      - LW_API_PRIVATEKEY
+    command: /bin/bash -c "bash"

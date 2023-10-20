@@ -1,0 +1,81 @@
+service: lwbot-gpt
+frameworkVersion: "^3"
+
+
+params:
+  default:
+    prefix: ${param:author}-${sls:stage}-${self:service}
+    table_access_token: ${param:prefix}-access-tokens
+
+custom:
+  pythonRequirements:
+    useStaticCache: false
+    useDownloadCache: false
+    slim: true
+
+package:
+  patterns:
+    - '!node_modules/**'
+    - '!venv/**'
+    - '!package.json'
+    - '!package-lock.json'
+
+provider:
+  name: aws
+  runtime: python3.9
+  region: ap-northeast-1
+  stackName: ${param:prefix}
+  iamManagedPolicies:
+    - 'arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess'
+    - 'arn:aws:iam::aws:policy/AWSLambdaExecute'
+  environment:
+    Prefix: ${param:prefix}
+    Author: ${param:author}
+    Dep: ${param:dep, "none"}
+    Stage: ${sls:stage}
+    LOG_LEVEL: INFO
+    TABLE_ACCESS_TOKEN: ${param:table_access_token}
+    LW_API_BOT_ID: ${env:LW_API_BOT_ID}
+    LW_API_BOT_SECRET: ${env:LW_API_BOT_SECRET}
+    LW_API_CLIENT_ID: ${env:LW_API_CLIENT_ID}
+    LW_API_CLIENT_SECRET: ${env:LW_API_CLIENT_SECRET}
+    LW_API_SERVICE_ACCOUNT: ${env:LW_API_SERVICE_ACCOUNT}
+    LW_API_PRIVATEKEY: ${env:LW_API_PRIVATEKEY}
+    OPENAI_API_TYPE: ${env:OPENAI_API_TYPE, "none"}
+    OPENAI_API_KEY: ${env:OPENAI_API_KEY}
+    OPENAI_API_BASE: ${env:OPENAI_API_BASE, null}
+    OPENAI_MODEL: ${env:OPENAI_MODEL}
+    OPENAI_ORGANIZATION_ID: ${env:OPENAI_ORGANIZATION_ID, null}
+    OPENAI_API_VER: ${env:OPENAI_API_VER, "2023-07-01-preview"}
+  architecture: arm64
+
+
+functions:
+  lw_callback:
+    name: ${param:prefix}-lw-callback
+    handler: lw_callback_lambda_handler.lambda_handler
+    timeout: 900
+    memorySize: 256
+    layers:
+      - arn:aws:lambda:${aws:region}:017000801446:layer:AWSLambdaPowertoolsPythonV2-Arm64:35
+    url:
+      cors: false
+
+
+resources:
+  Resources:
+    LWAccessTokenTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${param:table_access_token}
+        AttributeDefinitions:
+          - AttributeName: domain_id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: domain_id
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+
+
+plugins:
+  - serverless-python-requirements
